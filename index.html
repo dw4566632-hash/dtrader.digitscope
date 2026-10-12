@@ -1,1 +1,310 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DigitScope | Deriv Live Scanner</title>
+<style>
+:root{color-scheme:dark;--bg:#090d18;--panel:#121a2b;--line:#28354d;--text:#edf3ff;--muted:#9aaac4;--blue:#5685ff;--green:#48d6a0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+header{padding:24px 18px;background:#10182a;border-bottom:1px solid var(--line)}
+.wrap{max-width:1050px;margin:auto;padding:18px}
+.brand{font-size:25px;font-weight:800;letter-spacing:.5px}
+.brand span{color:var(--blue)}
+header p{color:var(--muted);margin:8px 0 0}
+.status{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-top:14px}
+.dot{width:9px;height:9px;border-radius:50%;background:#78849b}
+.dot.on{background:var(--green)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px;min-width:0}
+h2{font-size:16px;margin:0 0 16px}
+label{display:block;color:var(--muted);font-size:13px;margin:12px 0 7px}
+select,input,button{width:100%;border:1px solid var(--line);border-radius:9px;padding:12px;background:#0c1322;color:var(--text);font-size:14px}
+button{cursor:pointer;font-weight:700}
+.primary{background:var(--blue);border-color:var(--blue);color:white}
+button:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.metric{font-size:27px;font-weight:800;margin-top:8px}
+.small{font-size:12px;color:var(--muted);line-height:1.6}
+.suggestion{font-size:20px;font-weight:800;margin:8px 0}
+.pill{display:inline-block;border-radius:20px;padding:5px 9px;background:#202d46;color:#c5d6ff;font-size:12px}
+.digit-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.digit{background:#0c1322;border:1px solid var(--line);border-radius:9px;text-align:center;padding:10px 3px}
+.digit strong{display:block;font-size:19px;margin-bottom:6px}
+.bar{height:5px;background:#25334b;border-radius:8px;margin-top:8px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--blue);width:0}
+.tick-list{max-height:250px;overflow:auto}
+.tick{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+footer{padding:10px 0 28px;color:var(--muted);font-size:12px;line-height:1.7}
+.notice{border-left:3px solid #e7b657;padding:10px 12px;background:#211d17;color:#ead9b7;font-size:12px;line-height:1.6}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.wrap{padding:12px}.panel{padding:15px}.digit-grid{gap:5px}.digit{padding:9px 2px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">DIGIT<span>SCOPE</span></div>
+    <p>Live Deriv tick analysis · Matches &amp; Differs</p>
+    <div class="status"><span id="dot" class="dot"></span><span id="status">Not connected</span></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="panel">
+    <h2>Scanner controls</h2>
+    <label for="market">Volatility market</label>
+    <select id="market">
+      <option value="R_10">Volatility 10 Index</option>
+      <option value="R_25">Volatility 25 Index</option>
+      <option value="R_50">Volatility 50 Index</option>
+      <option value="R_75">Volatility 75 Index</option>
+      <option value="R_100" selected>Volatility 100 Index</option>
+      <option value="1HZ10V">Volatility 10 (1s) Index</option>
+      <option value="1HZ25V">Volatility 25 (1s) Index</option>
+      <option value="1HZ50V">Volatility 50 (1s) Index</option>
+      <option value="1HZ75V">Volatility 75 (1s) Index</option>
+      <option value="1HZ100V">Volatility 100 (1s) Index</option>
+      <option value="1HZ150V">Volatility 150 (1s) Index</option>
+      <option value="1HZ200V">Volatility 200 (1s) Index</option>
+      <option value="1HZ250V">Volatility 250 (1s) Index</option>
+      <option value="JD10">Jump 10 Index</option>
+      <option value="JD25">Jump 25 Index</option>
+      <option value="JD50">Jump 50 Index</option>
+      <option value="JD75">Jump 75 Index</option>
+      <option value="JD100">Jump 100 Index</option>
+    </select>
+    <label for="window">Analysis window (ticks)</label>
+    <select id="window">
+      <option value="50">50 ticks</option>
+      <option value="100" selected>100 ticks</option>
+      <option value="250">250 ticks</option>
+      <option value="500">500 ticks</option>
+      <option value="1000">1,000 ticks</option>
+    </select>
+    <div class="actions">
+      <button id="start" class="primary">Connect &amp; Scan</button>
+      <button id="stop">Stop scanner</button>
+    </div>
+    <p class="small">Live data is received from Deriv. Changing markets restarts the scan.</p>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Live market summary</h2>
+      <div class="small">Selected market</div>
+      <div id="marketName" class="suggestion">Volatility 100 Index</div>
+      <div class="grid">
+        <div><div class="small">Ticks collected</div><div id="count" class="metric">0</div></div>
+        <div><div class="small">Latest digit</div><div id="latest" class="metric">—</div></div>
+      </div>
+      <p class="small" id="progress">Waiting for live ticks.</p>
+    </section>
+    <section class="panel">
+      <h2>Matches analysis</h2>
+      <span class="pill">Most frequent digit</span>
+      <div id="matchDigit" class="suggestion">Not enough data</div>
+      <p id="matchDetail" class="small">Collecting ticks before reporting statistics.</p>
+    </section>
+    <section class="panel">
+      <h2>Differs analysis</h2>
+      <span class="pill">Least frequent digit</span>
+      <div id="diffDigit" class="suggestion">Not enough data</div>
+      <p id="diffDetail" class="small">Collecting ticks before reporting statistics.</p>
+    </section>
+    <section class="panel">
+      <h2>Connection details</h2>
+      <div class="small">Last tick price</div>
+      <div id="price" class="metric">—</div>
+      <p id="updated" class="small">Last update: —</p>
+      <p id="connectionMessage" class="small">Connect to begin.</p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Digit frequency (0–9)</h2>
+    <p class="small">Percentage of digits observed in the current analysis window.</p>
+    <div id="digits" class="digit-grid"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Recent ticks</h2>
+    <div id="ticks" class="tick-list"><p class="small">No ticks received yet.</p></div>
+  </section>
+
+  <div class="notice">
+    <strong>Important:</strong> These are historical frequency summaries, not reliable predictions of the next digit. Every digit may occur next. This scanner does not place trades, connect to your account, or guarantee profits.
+  </div>
+  <footer>DigitScope · Independent analysis interface · Deriv is the source of live market data. Some markets may be unavailable depending on current availability.</footer>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const names = {
+    R_10:"Volatility 10 Index", R_25:"Volatility 25 Index",
+    R_50:"Volatility 50 Index", R_75:"Volatility 75 Index",
+    R_100:"Volatility 100 Index", "1HZ10V":"Volatility 10 (1s) Index",
+    "1HZ25V":"Volatility 25 (1s) Index", "1HZ50V":"Volatility 50 (1s) Index",
+    "1HZ75V":"Volatility 75 (1s) Index", "1HZ100V":"Volatility 100 (1s) Index",
+    "1HZ150V":"Volatility 150 (1s) Index", "1HZ200V":"Volatility 200 (1s) Index",
+    "1HZ250V":"Volatility 250 (1s) Index", JD10:"Jump 10 Index",
+    JD25:"Jump 25 Index", JD50:"Jump 50 Index", JD75:"Jump 75 Index",
+    JD100:"Jump 100 Index"
+  };
+  let socket = null, active = false, digits = [], recent = [], decimals = null;
+
+  function setStatus(message, connected=false) {
+    $("status").textContent = message;
+    $("dot").classList.toggle("on", connected);
+  }
+  function getDigit(quote, pipSize) {
+    let precision = Number.isInteger(pipSize) && pipSize >= 0 && pipSize <= 10
+      ? pipSize : null;
+    if (precision === null) {
+      const s = String(quote);
+      precision = s.includes(".") ? s.split(".")[1].length : 0;
+    }
+    decimals = precision;
+    const formatted = Number(quote).toFixed(precision);
+    const last = formatted.replace(/\D/g, "");
+    return Number(last[last.length - 1] || 0);
+  }
+  function render() {
+    const n = digits.length, counts = Array(10).fill(0);
+    digits.forEach(d => counts[d]++);
+    $("count").textContent = n;
+    $("latest").textContent = n ? digits[n - 1] : "—";
+    $("progress").textContent = n < Number($("window").value)
+      ? `Collecting data: ${n} of ${$("window").value} ticks.`
+      : `Analysis window filled: ${n} ticks.`;
+    const grid = $("digits");
+    grid.innerHTML = "";
+    counts.forEach((c, d) => {
+      const pct = n ? c / n * 100 : 0;
+      const item = document.createElement("div");
+      item.className = "digit";
+      item.innerHTML = `<strong>${d}</strong><span class="small">${pct.toFixed(1)}%</span><div class="bar"><span style="width:${pct}%"></span></div><div class="small">${c} ticks</div>`;
+      grid.appendChild(item);
+    });
+    if (n < 30) {
+      $("matchDigit").textContent = "Not enough data";
+      $("diffDigit").textContent = "Not enough data";
+      $("matchDetail").textContent = `Need at least 30 ticks; currently ${n}.`;
+      $("diffDetail").textContent = `Need at least 30 ticks; currently ${n}.`;
+    } else {
+      const max = Math.max(...counts), min = Math.min(...counts);
+      const most = counts.map((c,d)=>({c,d})).filter(x=>x.c===max).map(x=>x.d);
+      const least = counts.map((c,d)=>({c,d})).filter(x=>x.c===min).map(x=>x.d);
+      $("matchDigit").textContent = most.join(" / ");
+      $("diffDigit").textContent = least.join(" / ");
+      $("matchDetail").textContent = `Most frequent in this sample: ${max}/${n} ticks (${(100*max/n).toFixed(1)}%). Ties are shown.`;
+      $("diffDetail").textContent = `Least frequent in this sample: ${min}/${n} ticks (${(100*min/n).toFixed(1)}%). Ties are shown.`;
+    }
+    $("ticks").innerHTML = recent.length ? recent.map(t =>
+      `<div class="tick"><span>${escapeText(t.time)}</span><span>${escapeText(t.price)}</span><strong>Digit ${t.digit}</strong></div>`
+    ).join("") : '<p class="small">No ticks received yet.</p>';
+  }
+  function escapeText(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+  function stop(message="Scanner stopped.") {
+    active = false;
+    if (socket) {
+      const old = socket;
+      socket = null;
+      old.onclose = null;
+      old.onerror = null;
+      old.onmessage = null;
+      try { old.close(); } catch (_) {}
+    }
+    setStatus(message, false);
+    $("connectionMessage").textContent = message;
+  }
+  function start() {
+    stop("Connecting to Deriv...");
+    digits = [];
+    recent = [];
+    decimals = null;
+    render();
+    const symbol = $("market").value;
+    $("marketName").textContent = names[symbol] || symbol;
+    $("price").textContent = "—";
+    $("updated").textContent = "Last update: —";
+    $("connectionMessage").textContent = "Opening live data connection...";
+    setStatus("Connecting...", false);
+    active = true;
+    try {
+      socket = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+      socket.onopen = () => {
+        if (!active) return;
+        setStatus("Connected · waiting for ticks", true);
+        $("connectionMessage").textContent = "Live connection open.";
+        socket.send(JSON.stringify({ticks: symbol, subscribe: 1}));
+      };
+      socket.onmessage = event => {
+        if (!active) return;
+        let data;
+        try { data = JSON.parse(event.data); } catch (_) { return; }
+        if (data.error) {
+          setStatus("API error", false);
+          $("connectionMessage").textContent = data.error.message || "Deriv returned an error.";
+          return;
+        }
+        if (!data.tick) return;
+        const tick = data.tick;
+        const quote = Number(tick.quote);
+        if (!Number.isFinite(quote)) return;
+        const d = getDigit(quote, tick.pip_size);
+        digits.push(d);
+        const limit = Number($("window").value);
+        if (digits.length > limit) digits.shift();
+        const precision = Number.isInteger(tick.pip_size) ? tick.pip_size :
+          (String(tick.quote).split(".")[1] || "").length;
+        const price = quote.toFixed(precision);
+        recent.unshift({
+          time: new Date((tick.epoch || Date.now()/1000)*1000).toLocaleTimeString(),
+          price, digit:d
+        });
+        recent = recent.slice(0, 25);
+        $("price").textContent = price;
+        $("updated").textContent = "Last update: " + new Date().toLocaleTimeString();
+        setStatus("Live · " + symbol, true);
+        $("connectionMessage").textContent = "Receiving live market ticks.";
+        render();
+      };
+      socket.onerror = () => {
+        setStatus("Connection error", false);
+        $("connectionMessage").textContent = "Could not connect. Try again in a moment.";
+      };
+      socket.onclose = () => {
+        if (active) {
+          setStatus("Disconnected", false);
+          $("connectionMessage").textContent = "Connection closed. Press Connect & Scan to retry.";
+          active = false;
+        }
+      };
+    } catch (err) {
+      stop("Unable to start connection.");
+      $("connectionMessage").textContent = "Your browser could not create the connection.";
+    }
+  }
+  $("start").addEventListener("click", start);
+  $("stop").addEventListener("click", () => stop());
+  $("market").addEventListener("change", () => {
+    $("marketName").textContent = names[$("market").value] || $("market").value;
+    if (active) start();
+  });
+  $("window").addEventListener("change", () => {
+    const limit = Number($("window").value);
+    digits = digits.slice(-limit);
+    render();
+  });
+  render();
+})();
+</script>
+</body>
+</html>
